@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import Form from '@rjsf/shadcn'
-import type { RJSFSchema } from '@rjsf/utils'
+import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils'
 import validator from '@rjsf/validator-ajv8'
 
 type SubHaulerFormData = {
@@ -146,6 +146,55 @@ export default function FormsPage() {
 
   const [formData, setFormData] = useState<SubHaulerFormData>({})
 
+  const transformErrors = (errors: RJSFValidationError[]) => {
+    return errors.map((error) => {
+      switch (error.name) {
+        case 'required':
+          return { ...error, message: 'This field is required.' }
+        case 'format':
+          if (error.params?.format === 'email') {
+            return { ...error, message: 'Enter a valid email address.' }
+          }
+          if (error.params?.format === 'date') {
+            return { ...error, message: 'Enter a valid date.' }
+          }
+          return { ...error, message: 'Enter a valid value.' }
+        case 'minLength':
+          return {
+            ...error,
+            message: `Must be at least ${error.params?.limit} characters.`,
+          }
+        case 'maxLength':
+          return {
+            ...error,
+            message: `Must be at most ${error.params?.limit} characters.`,
+          }
+        case 'minimum':
+          return {
+            ...error,
+            message: `Must be ${error.params?.limit} or greater.`,
+          }
+        case 'pattern': {
+          if (error.property?.endsWith('Phone')) {
+            return {
+              ...error,
+              message: 'Enter a valid phone number.',
+            }
+          }
+          if (error.property?.endsWith('socialSecurityLast4')) {
+            return {
+              ...error,
+              message: 'Enter the last 4 digits (e.g. 1234).',
+            }
+          }
+          return { ...error, message: 'Enter a valid value.' }
+        }
+        default:
+          return error
+      }
+    })
+  }
+
   return (
     <section>
       <h1>Forms</h1>
@@ -155,6 +204,9 @@ export default function FormsPage() {
         schema={schema}
         validator={validator}
         formData={formData}
+        noHtml5Validate
+        showErrorList={false}
+        transformErrors={transformErrors}
         onChange={(event) => setFormData((event.formData ?? {}) as SubHaulerFormData)}
         onSubmit={(event) => {
           console.log('Submitted form data:', event.formData)

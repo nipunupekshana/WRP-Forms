@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import ModeToggle from '../theme/mode-toggle'
 
 export default function RootLayout() {
   return (
@@ -7,7 +8,8 @@ export default function RootLayout() {
       <header className="border-b">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-4 py-4">
           <strong className="text-base">WRP Forms</strong>
-          <nav className="flex flex-wrap gap-3 text-sm" aria-label="Primary">
+          <div className="flex items-center gap-3">
+            <nav className="flex flex-wrap gap-3 text-sm" aria-label="Primary">
             <NavLink
               to="/"
               end
@@ -25,7 +27,9 @@ export default function RootLayout() {
             >
               Forms
             </NavLink>
-          </nav>
+            </nav>
+            <ModeToggle />
+          </div>
         </div>
       </header>
 
