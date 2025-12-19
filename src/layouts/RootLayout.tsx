@@ -20,12 +20,12 @@ export default function RootLayout() {
               Home
             </NavLink>
             <NavLink
-              to="/forms"
+              to="/sub-hauler-form"
               className={({ isActive }) =>
                 isActive ? 'underline underline-offset-4' : 'hover:underline'
               }
             >
-              Forms
+              Sub-Hauler Form
             </NavLink>
             <NavLink
               to="/workforce-checklist"

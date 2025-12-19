@@ -19,7 +19,7 @@ export const router = createBrowserRouter([
         element: <HomePage />,
       },
       {
-        path: 'forms',
+        path: 'sub-hauler-form',
         element: <FormsPage />,
       },
       {

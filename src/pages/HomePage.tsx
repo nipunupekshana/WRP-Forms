@@ -6,7 +6,7 @@ export default function HomePage() {
       <h1>Home</h1>
       <p>
         This project now uses React Router. Use the navigation above, or go to{' '}
-        <Link to="/forms">Forms</Link>.
+        <Link to="/sub-hauler-form">Sub-Hauler Form</Link>.
       </p>
     </section>
   )
