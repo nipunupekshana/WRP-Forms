@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
-import Form from '@rjsf/shadcn'
-import type { RJSFSchema, RJSFValidationError } from '@rjsf/utils'
-import validator from '@rjsf/validator-ajv8'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { generateForm } from '@rjsf/shadcn'
+import type { ErrorSchema, FieldErrors, RJSFSchema, RJSFValidationError } from '@rjsf/utils'
+import { customizeValidator } from '@rjsf/validator-ajv8'
 
 type SubHaulerFormData = {
   companyName?: string
@@ -41,10 +41,19 @@ type SubHaulerFormData = {
   copyOfTruckRegistration?: boolean
 }
 
+type SubHaulerRjsfFormData = {
+  [K in keyof SubHaulerFormData]?: unknown
+}
+
 export default function FormsPage() {
+  const Form = useMemo(() => generateForm<SubHaulerRjsfFormData>(), [])
+  const rjsfValidator = useMemo(() => customizeValidator<SubHaulerRjsfFormData>(), [])
+
   const schema: RJSFSchema = useMemo(
     () => ({
       title: 'Sub-Hauler Requirements',
+      description:
+        'Please complete the following form to ensure compliance with Werdco BC requirements.',
       type: 'object',
       required: ['companyName', 'ownerName', 'email'],
       properties: {
@@ -146,6 +155,176 @@ export default function FormsPage() {
 
   const [formData, setFormData] = useState<SubHaulerFormData>({})
 
+  const [activeField, setActiveField] = useState<string | null>(null)
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(() => new Set())
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
+  const [hasSubmitted, setHasSubmitted] = useState(false)
+
+  const validateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const latestValidationRef = useRef<{ key: string; value: unknown } | null>(null)
+  const VALIDATION_DEBOUNCE_MS = 200
+
+  const cancelPendingValidation = useCallback(() => {
+    if (validateDebounceRef.current) {
+      clearTimeout(validateDebounceRef.current)
+      validateDebounceRef.current = null
+    }
+    latestValidationRef.current = null
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      cancelPendingValidation()
+    }
+  }, [cancelPendingValidation])
+
+  const idToFieldKey = (id: string): string | null => {
+    if (!id) return null
+    if (id === 'root') return null
+    if (id.startsWith('root_')) return id.slice('root_'.length)
+    return id
+  }
+
+  const errorToFieldKey = (error: RJSFValidationError): string | null => {
+    if (error.name === 'required') {
+      const missing = (error.params as { missingProperty?: string } | undefined)
+        ?.missingProperty
+      return missing ?? null
+    }
+
+    const property = error.property
+    if (!property) return null
+    return property.replace(/^\./, '')
+  }
+
+  const validateField = (key: string, value: unknown): string[] => {
+    const propertySchema = (schema.properties as Record<string, unknown> | undefined)?.[
+      key
+    ] as
+      | {
+          type?: string
+          minLength?: number
+          maxLength?: number
+          pattern?: string
+          format?: string
+          minimum?: number
+        }
+      | undefined
+
+    if (!propertySchema) return []
+
+    const requiredList = (schema.required) ?? []
+    const isRequired = requiredList.includes(key)
+
+    const messages: string[] = []
+
+    const isEmpty = value === undefined || value === null || value === ''
+    if (isRequired && isEmpty) {
+      messages.push('This field is required.')
+      return messages
+    }
+
+    if (isEmpty) return messages
+
+    if (propertySchema.type === 'integer' || propertySchema.type === 'number') {
+      const numericValue = typeof value === 'number' ? value : Number(value)
+      if (!Number.isFinite(numericValue)) {
+        messages.push('Enter a valid number.')
+        return messages
+      }
+
+      if (propertySchema.type === 'integer' && !Number.isInteger(numericValue)) {
+        messages.push('Enter a whole number.')
+        return messages
+      }
+
+      if (typeof propertySchema.minimum === 'number' && numericValue < propertySchema.minimum) {
+        messages.push(`Must be ${propertySchema.minimum} or greater.`)
+      }
+
+      return messages
+    }
+
+    const stringValue = String(value)
+
+    if (typeof propertySchema.minLength === 'number' && stringValue.length < propertySchema.minLength) {
+      messages.push(`Must be at least ${propertySchema.minLength} characters.`)
+    }
+
+    if (typeof propertySchema.maxLength === 'number' && stringValue.length > propertySchema.maxLength) {
+      messages.push(`Must be at most ${propertySchema.maxLength} characters.`)
+    }
+
+    if (propertySchema.format === 'email') {
+      // Lightweight email check (AJV will still enforce on submit)
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(stringValue)
+      if (!emailOk) messages.push('Enter a valid email address.')
+    }
+
+    if (propertySchema.format === 'date') {
+      // Expect yyyy-mm-dd (AJV will still enforce on submit)
+      const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(stringValue)
+      if (!dateOk) {
+        messages.push('Enter a valid date.')
+      }
+    }
+
+    if (typeof propertySchema.pattern === 'string') {
+      try {
+        const re = new RegExp(propertySchema.pattern)
+        if (!re.test(stringValue)) {
+          if (key.endsWith('Phone')) {
+            messages.push('Enter a valid phone number.')
+          } else if (key === 'socialSecurityLast4') {
+            messages.push('Enter the last 4 digits (e.g. 1234).')
+          } else {
+            messages.push('Enter a valid value.')
+          }
+        }
+      } catch {
+        // Ignore invalid regex patterns
+      }
+    }
+
+    return messages
+  }
+
+  const scheduleValidateField = (key: string, value: unknown) => {
+    latestValidationRef.current = { key, value }
+
+    if (validateDebounceRef.current) {
+      clearTimeout(validateDebounceRef.current)
+    }
+
+    validateDebounceRef.current = setTimeout(() => {
+      const latest = latestValidationRef.current
+      if (!latest) return
+
+      const messages = validateField(latest.key, latest.value)
+      setFieldErrors((prev) => ({ ...prev, [latest.key]: messages }))
+    }, VALIDATION_DEBOUNCE_MS)
+  }
+
+  const focusOnError = useCallback(
+    (error: RJSFValidationError) => {
+      const key = errorToFieldKey(error)
+      if (!key) return
+
+      setActiveField(key)
+      setTouchedFields((prev) => {
+        const next = new Set(prev)
+        next.add(key)
+        return next
+      })
+
+      const el = document.getElementById(`root_${key}`)
+      if (!el) return
+      el.focus()
+      el.scrollIntoView({ block: 'center' })
+    },
+    [],
+  )
+
   const transformErrors = (errors: RJSFValidationError[]) => {
     return errors.map((error) => {
       switch (error.name) {
@@ -195,21 +374,95 @@ export default function FormsPage() {
     })
   }
 
+  const extraErrors = useMemo<ErrorSchema<SubHaulerRjsfFormData> | undefined>(() => {
+    const isSchemaFieldKey = (key: string): key is keyof SubHaulerRjsfFormData => {
+      return Boolean((schema.properties as Record<string, unknown> | undefined)?.[key])
+    }
+
+    if (hasSubmitted) return undefined
+
+    const result: ErrorSchema<SubHaulerRjsfFormData> = {}
+    const resultByKey =
+      result as unknown as Record<keyof SubHaulerRjsfFormData, FieldErrors>
+
+    for (const [key, messages] of Object.entries(fieldErrors)) {
+      if (!messages.length) continue
+      if (key !== activeField && !touchedFields.has(key)) continue
+
+      if (!isSchemaFieldKey(key)) continue
+      resultByKey[key] = {
+        __errors: messages,
+      }
+    }
+
+    return Object.keys(result).length ? result : undefined
+  }, [activeField, fieldErrors, hasSubmitted, schema, touchedFields])
+
   return (
     <section>
-      <h1>Forms</h1>
-      <p>Sub-Hauler Requirements form (RJSF + Shadcn theme).</p>
-
       <Form
         schema={schema}
-        validator={validator}
+        validator={rjsfValidator}
         formData={formData}
         noHtml5Validate
         showErrorList={false}
         transformErrors={transformErrors}
-        onChange={(event) => setFormData((event.formData ?? {}) as SubHaulerFormData)}
+        extraErrors={extraErrors}
+        focusOnFirstError={focusOnError}
+        onChange={(event, id) => {
+          const nextData = (event.formData ?? {}) as SubHaulerFormData
+          setFormData(nextData)
+          setHasSubmitted(false)
+
+          const key = idToFieldKey(id ?? '')
+          if (!key) return
+
+          setActiveField(key)
+          setTouchedFields((prev) => {
+            const next = new Set(prev)
+            next.add(key)
+            return next
+          })
+
+          scheduleValidateField(key, (nextData as Record<string, unknown>)[key])
+        }}
+        onFocus={(id) => {
+          const key = idToFieldKey(id)
+          setActiveField(key)
+          if (!key) return
+          setTouchedFields((prev) => {
+            const next = new Set(prev)
+            next.add(key)
+            return next
+          })
+        }}
+        onBlur={(id) => {
+          const key = idToFieldKey(id)
+          setActiveField((current) => (current === key ? null : current))
+
+          if (!key) return
+          setTouchedFields((prev) => {
+            const next = new Set(prev)
+            next.add(key)
+            return next
+          })
+
+          const currentValue = (formData as Record<string, unknown>)[key]
+          const messages = validateField(key, currentValue)
+          setFieldErrors((prev) => ({ ...prev, [key]: messages }))
+        }}
         onSubmit={(event) => {
+          cancelPendingValidation()
+          setHasSubmitted(true)
+          setFieldErrors({})
           console.log('Submitted form data:', event.formData)
+        }}
+        onError={() => {
+          // Prevent duplicate error messages: RJSF will show AJV errors on submit failure.
+          // Our per-field extraErrors are only for while-typing feedback.
+          cancelPendingValidation()
+          setHasSubmitted(true)
+          setFieldErrors({})
         }}
       />
     </section>

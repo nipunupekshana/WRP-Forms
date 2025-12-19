@@ -27,6 +27,14 @@ export default function RootLayout() {
             >
               Forms
             </NavLink>
+            <NavLink
+              to="/workforce-checklist"
+              className={({ isActive }) =>
+                isActive ? 'underline underline-offset-4' : 'hover:underline'
+              }
+            >
+              Workforce Checklist
+            </NavLink>
             </nav>
             <ModeToggle />
           </div>

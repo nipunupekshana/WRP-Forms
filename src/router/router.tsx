@@ -5,6 +5,7 @@ import ErrorPage from '../pages/ErrorPage'
 
 const HomePage = lazy(() => import('../pages/HomePage'))
 const FormsPage = lazy(() => import('../pages/FormsPage'))
+const WorkforceChecklistPage = lazy(() => import('../pages/WorkforceChecklistPage'))
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage'))
 
 export const router = createBrowserRouter([
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
       {
         path: 'forms',
         element: <FormsPage />,
+      },
+      {
+        path: 'workforce-checklist',
+        element: <WorkforceChecklistPage />,
       },
       {
         path: '*',
