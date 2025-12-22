@@ -2,20 +2,16 @@ import { useCallback, useState } from 'react'
 import { generateForm } from '@rjsf/shadcn'
 import type { FormContextType, RJSFSchema, RJSFValidationError } from '@rjsf/utils'
 import { customizeValidator } from '@rjsf/validator-ajv8'
-import { idToFieldKey, errorToFieldKey } from '../forms/rjsf/field-ids'
-import { useLiveFieldValidation } from '../forms/rjsf/useLiveFieldValidation'
-import { CRAFT_TRADES } from '../forms/workforce/constants'
+import { errorToFieldKey } from '../forms/rjsf/field-ids'
+// import { CRAFT_TRADES } from '../forms/workforce/constants'
 import { workforceChecklistSchema } from '../forms/workforce/schema'
 import type {
-  WorkforceChecklistFormData,
-  WorkforceChecklistRow,
+  // WorkforceChecklistFormData,
+  // WorkforceChecklistRow,
   WorkforceChecklistRjsfFormData,
 } from '../forms/workforce/types'
 import { WorkforceResponsesTableField } from '../forms/workforce/WorkforceResponsesTableField'
-import {
-  transformWorkforceErrors,
-  validateWorkforceField,
-} from '../forms/workforce/validation'
+import { transformWorkforceErrors } from '../forms/workforce/validation'
 
 type WorkforceFormContext = FormContextType & {
   submitAttempted?: boolean
@@ -28,8 +24,7 @@ const Form = generateForm<
   WorkforceFormContext
 >()
 const rjsfValidator = customizeValidator<WorkforceChecklistRjsfFormData>()
-const LIVE_VALIDATE_FIELDS = new Set(['contactNo', 'contractorName'])
-const initialResponses: WorkforceChecklistRow[] = CRAFT_TRADES.map((craft) => ({ craft }))
+// const initialResponses: WorkforceChecklistRow[] = CRAFT_TRADES.map((craft) => ({ craft }))
 const uiSchema = {
   'ui:options': { label: false },
   contractorName: {
@@ -41,25 +36,11 @@ const uiSchema = {
 }
 
 export default function WorkforceChecklistPage() {
-  const [formData, setFormData] = useState<WorkforceChecklistFormData>({
-    responses: initialResponses,
-  })
+  // const [formData, setFormData] = useState<WorkforceChecklistFormData>({
+  //   responses: initialResponses,
+  // })
 
   const [submitAttempted, setSubmitAttempted] = useState(false)
-
-  const {
-    extraErrors,
-    cancelPendingValidation,
-    markTouched,
-    setActiveField,
-    setFieldErrors,
-    scheduleValidateField,
-    validateFieldNow,
-  } = useLiveFieldValidation<WorkforceChecklistRjsfFormData>({
-    isSubmitted: submitAttempted,
-    validateField: validateWorkforceField,
-    isFieldEligible: (key) => LIVE_VALIDATE_FIELDS.has(key),
-  })
 
   const focusOnError = useCallback((error: RJSFValidationError) => {
     const property = error.property?.replace(/^\./, '') ?? ''
@@ -89,74 +70,31 @@ export default function WorkforceChecklistPage() {
     const key = errorToFieldKey(error)
     if (!key) return
 
-    setActiveField(key)
-    markTouched(key)
-
     const el = document.getElementById(`root_${key}`)
     if (!el) return
     el.focus()
     el.scrollIntoView({ block: 'center' })
-  }, [markTouched, setActiveField])
+  }, [])
 
-  const handleChange = useCallback(
-    (event: { formData?: unknown }, id?: string) => {
-      const nextData = (event.formData ?? {}) as WorkforceChecklistFormData
-      setFormData(nextData)
-
-      const key = idToFieldKey(id ?? '')
-      if (!key) return
-      if (!LIVE_VALIDATE_FIELDS.has(key)) return
-
-      setActiveField(key)
-      markTouched(key)
-
-      scheduleValidateField(key, (nextData as Record<string, unknown>)[key])
-    },
-    [markTouched, scheduleValidateField, setActiveField],
-  )
-
-  const handleFocus = useCallback(
-    (id: string) => {
-      const key = idToFieldKey(id)
-      if (!key) return
-      if (!LIVE_VALIDATE_FIELDS.has(key)) return
-      setActiveField(key)
-      markTouched(key)
-    },
-    [markTouched, setActiveField],
-  )
-
-  const handleBlur = useCallback(
-    (id: string) => {
-      const key = idToFieldKey(id)
-      setActiveField((current) => (current === key ? null : current))
-
-      if (!key) return
-      if (!LIVE_VALIDATE_FIELDS.has(key)) return
-
-      markTouched(key)
-
-      const currentValue = (formData as Record<string, unknown>)[key]
-      validateFieldNow(key, currentValue)
-    },
-    [formData, markTouched, setActiveField, validateFieldNow],
-  )
+  // const handleChange = useCallback(
+  //   (event: { formData?: unknown }) => {
+  //     const nextData = (event.formData ?? {}) as WorkforceChecklistFormData
+  //     setFormData(nextData)
+  //   },
+  //   [],
+  // )
 
   const handleSubmit = useCallback(
     (event: { formData?: unknown }) => {
-      cancelPendingValidation()
       setSubmitAttempted(true)
-      setFieldErrors({})
       console.log('Submitted workforce checklist:', event.formData)
     },
-    [cancelPendingValidation, setFieldErrors],
+    [],
   )
 
   const handleError = useCallback(() => {
-    cancelPendingValidation()
     setSubmitAttempted(true)
-    setFieldErrors({})
-  }, [cancelPendingValidation, setFieldErrors])
+  }, [])
 
   return (
     <section className="space-y-6">
@@ -169,21 +107,17 @@ export default function WorkforceChecklistPage() {
         schema={workforceChecklistSchema}
         uiSchema={uiSchema}
         validator={rjsfValidator}
-        formData={formData}
+        // formData={formData}
         formContext={{ submitAttempted }}
         experimental_defaultFormStateBehavior={{ constAsDefaults: 'skipOneOf' }}
         noHtml5Validate
         showErrorList={false}
-        liveValidate={submitAttempted ? 'onChange' : false}
         transformErrors={transformWorkforceErrors}
-        extraErrors={extraErrors}
         focusOnFirstError={focusOnError}
         fields={{
           workforceResponsesTable: WorkforceResponsesTableField,
         }}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
+        // onChange={handleChange}
         onSubmit={handleSubmit}
         onError={handleError}
       />
