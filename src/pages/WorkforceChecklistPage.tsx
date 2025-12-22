@@ -3,6 +3,7 @@ import { generateForm } from '@rjsf/shadcn'
 import type { FormContextType, RJSFSchema, RJSFValidationError } from '@rjsf/utils'
 import { customizeValidator } from '@rjsf/validator-ajv8'
 import { errorToFieldKey } from '../forms/rjsf/field-ids'
+import SignatureField from '../forms/rjsf/SignatureField'
 // import { CRAFT_TRADES } from '../forms/workforce/constants'
 import { workforceChecklistSchema } from '../forms/workforce/schema'
 import type {
@@ -30,8 +31,14 @@ const uiSchema = {
   contractorName: {
     'ui:placeholder': 'e.g. ABC Construction LLC',
   },
+  signedNameTitle: {
+    'ui:placeholder': 'e.g. Jane Smith, Project Manager',
+  },
   responses: {
     'ui:field': 'workforceResponsesTable',
+  },
+  signature: {
+    'ui:field': 'signatureField',
   },
 }
 
@@ -109,13 +116,14 @@ export default function WorkforceChecklistPage() {
         validator={rjsfValidator}
         // formData={formData}
         formContext={{ submitAttempted }}
-        experimental_defaultFormStateBehavior={{ constAsDefaults: 'skipOneOf' }}
+        // experimental_defaultFormStateBehavior={{ constAsDefaults: 'skipOneOf' }}
         noHtml5Validate
         showErrorList={false}
         transformErrors={transformWorkforceErrors}
         focusOnFirstError={focusOnError}
         fields={{
           workforceResponsesTable: WorkforceResponsesTableField,
+          signatureField: SignatureField,
         }}
         // onChange={handleChange}
         onSubmit={handleSubmit}

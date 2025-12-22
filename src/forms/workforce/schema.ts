@@ -5,12 +5,11 @@ export const workforceChecklistSchema: RJSFSchema = {
   title: 'Project Workforce Checklist',
   description: 'For compliance with the Nevada Apprenticeship Utilization Act, 2019.',
   type: 'object',
-  required: ['contactNo', 'contractorName', 'responses'],
+  required: ['contractNo', 'contractorName', 'responses', 'signature', 'signedDate', 'signedNameTitle'],
   properties: {
-    contactNo: {
+    contractNo: {
       type: 'string',
-      title: 'Contact No.',
-      pattern: String.raw`^[0-9+()\-\s]{7,}$`,
+      title: 'Contract No.',
     },
     contractorName: {
       type: 'string',
@@ -46,6 +45,22 @@ export const workforceChecklistSchema: RJSFSchema = {
           },
         },
       },
+    },
+    signature: {
+      type: 'string',
+      title: 'Signed',
+      description:
+        'I affirm I am fully authorized to sign on behalf of the contractor/subcontractor listed above, and that the information provided is true and correct to the best of my knowledge. Additionally, I acknowledge any changes to the anticipated workforce, which may have an impact on compliance with the Nevada Apprenticeship Utilization Act, 2019, will require the submittal of a revised form within five (5) calendar days of the change.',
+    },
+    signedDate: {
+      type: 'string',
+      title: 'Date',
+      format: 'date',
+    },
+    signedNameTitle: {
+      type: 'string',
+      title: 'Name and Title',
+      minLength: 2,
     },
   },
 }

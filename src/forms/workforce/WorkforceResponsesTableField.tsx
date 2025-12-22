@@ -24,6 +24,14 @@ export function WorkforceResponsesTableField(
     () => (Array.isArray(formData) ? (formData as WorkforceChecklistRow[]) : []),
     [formData],
   )
+  const normalizedRows = useMemo<WorkforceChecklistRow[]>(
+    () =>
+      CRAFT_TRADES.map((craft, idx) => ({
+        craft,
+        ...(rows[idx] ?? {}),
+      })),
+    [rows],
+  )
 
   const submitAttempted = Boolean(registry.formContext?.submitAttempted)
   const isDisabled = Boolean(disabled || readonly)
@@ -35,7 +43,7 @@ export function WorkforceResponsesTableField(
       value: WorkforceChecklistRow[K],
     ) => {
       // Update one row while keeping the array shape stable for RJSF.
-      const next = rows.map((row, idx) => {
+      const next = normalizedRows.map((row, idx) => {
         if (idx !== rowIndex) return row
         return {
           ...row,
@@ -44,7 +52,7 @@ export function WorkforceResponsesTableField(
       })
       onChange(next as WorkforceChecklistRjsfFormData, fieldPath, undefined, fieldId)
     },
-    [fieldId, fieldPath, onChange, rows],
+    [fieldId, fieldPath, normalizedRows, onChange],
   )
 
   const groupBaseId = (rowIndex: number, key: keyof WorkforceChecklistRow) =>
@@ -87,7 +95,7 @@ export function WorkforceResponsesTableField(
           </thead>
           <tbody className="divide-y">
             {CRAFT_TRADES.map((craft, idx) => {
-              const row = rows[idx] ?? { craft }
+              const row = normalizedRows[idx]
               const moreThan3Errors =
                 submitAttempted && !row.moreThan3Employees ? ['This field is required.'] : []
               const waiverErrors =

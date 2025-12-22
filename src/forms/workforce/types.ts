@@ -8,8 +8,11 @@ export type WorkforceChecklistRow = {
 }
 
 export type WorkforceChecklistFormData = {
-  contactNo?: string
+  contractNo?: string
   contractorName?: string
+  signedNameTitle?: string
+  signedDate?: string
+  signature?: string
   responses?: WorkforceChecklistRow[]
 }
 
