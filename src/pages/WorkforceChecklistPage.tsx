@@ -116,7 +116,7 @@ export default function WorkforceChecklistPage() {
         validator={rjsfValidator}
         // formData={formData}
         formContext={{ submitAttempted }}
-        // experimental_defaultFormStateBehavior={{ constAsDefaults: 'skipOneOf' }}
+        experimental_defaultFormStateBehavior={{ constAsDefaults: 'skipOneOf' }}
         noHtml5Validate
         showErrorList={false}
         transformErrors={transformWorkforceErrors}

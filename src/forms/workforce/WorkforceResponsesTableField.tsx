@@ -27,8 +27,8 @@ export function WorkforceResponsesTableField(
   const normalizedRows = useMemo<WorkforceChecklistRow[]>(
     () =>
       CRAFT_TRADES.map((craft, idx) => ({
+        ...rows[idx],
         craft,
-        ...(rows[idx] ?? {}),
       })),
     [rows],
   )
